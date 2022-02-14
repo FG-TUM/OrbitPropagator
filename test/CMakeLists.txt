@@ -13,8 +13,6 @@ set(SOURCES ${TEST_SOURCES})
 
 add_executable(${BINARY} ${TEST_SOURCES})
 
-add_test(NAME ${BINARY} COMMAND ${BINARY})
-
 include(GoogleTest)
 gtest_discover_tests(${BINARY})
 
