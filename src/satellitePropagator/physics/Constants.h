@@ -80,7 +80,7 @@ inline constexpr double S_22 = -1.40016683654e-6;
  */
 inline constexpr double THETA_G = 280.4606;
 /**
- * @brief Angular velocity of earth
+ * @brief Angular velocity of earth rotation.
  *
  * Used in:
  * - Acceleration::C22Component
@@ -88,7 +88,7 @@ inline constexpr double THETA_G = 280.4606;
  */
 inline constexpr double NU_EARTH = 4.178074622024230e-3;
 /**
- * @brief Angular velocity of sun
+ * @brief Angular velocity of sun rotation
  *
  * Used in:
  * - Acceleration::SolComponent
