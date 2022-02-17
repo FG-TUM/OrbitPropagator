@@ -7,7 +7,7 @@
 #include "satellitePropagator/debris/DebrisContainer.h"
 #include "satellitePropagator/physics/AccelerationAccumulator.h"
 #include "satellitePropagator/physics/Constants.h"
-#include "satellitePropagator/physics/Integrator.h"
+#include "satellitePropagator/physics/LeapFrogIntegrator.h"
 
 /**
  * Initialize integrator, accumulator, and container with a single satellite in an equatorial orbit at given altitude.
@@ -40,7 +40,7 @@ auto initSystem(Debris::Debris& satellite, double altitude, const std::array<boo
         *container,
         0.0,
         nullptr);
-    auto integrator = std::make_unique<Integrator<Debris::DebrisContainer<Debris::Debris>>>(
+    auto integrator = std::make_unique<LeapFrogIntegrator<Debris::DebrisContainer<Debris::Debris>>>(
         *container,
         *accumulator,
         deltaT);

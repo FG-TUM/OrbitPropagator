@@ -173,7 +173,7 @@ protected:
     std::shared_ptr<FileInput<Debris::DebrisContainer<DummyDebris>>> file_input;
     std::shared_ptr<FileOutput<Debris::DebrisContainer<DummyDebris>>> file_output;
     std::shared_ptr<Acceleration::AccelerationAccumulator<Debris::DebrisContainer<DummyDebris>>> accumulator;
-    std::shared_ptr<Integrator<Debris::DebrisContainer<DummyDebris>>> integrator;
+    std::shared_ptr<LeapFrogIntegrator<Debris::DebrisContainer<DummyDebris>>> integrator;
 
     virtual void SetUp()
     {
@@ -192,7 +192,7 @@ protected:
             command_line->getOutputFileType(), file_input->getAccConfig());
         accumulator = std::make_shared<Acceleration::AccelerationAccumulator<Debris::DebrisContainer<DummyDebris>>>(
             file_input->getAccConfig(), *container, file_input->getStartT(), file_output.get());
-        integrator = std::make_shared<Integrator<Debris::DebrisContainer<DummyDebris>>>(*container, *accumulator,
+        integrator = std::make_shared<LeapFrogIntegrator<Debris::DebrisContainer<DummyDebris>>>(*container, *accumulator,
             file_input->getDeltaT());
     }
 };

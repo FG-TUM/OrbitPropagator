@@ -12,14 +12,14 @@
  * @brief Calculates status of Debris::Debris objects for next time step
  */
 template <class Container>
-class Integrator {
+class LeapFrogIntegrator {
 public:
     /**
      * @brief Default constructor
      *
      * Creates a new Integrator object with all values zero initialized
      */
-    Integrator();
+    LeapFrogIntegrator();
 
     /**
      * @brief Creates a Integrator object and sets the private #container and
@@ -32,7 +32,7 @@ public:
      * the current time step
      * @param delta_t_arg Time step to Integrate over
      */
-    Integrator(Container& container,
+    LeapFrogIntegrator(Container& container,
         Acceleration::AccelerationAccumulator<Container>& accumulator_arg,
         double delta_t_arg)
         : container(&container)
@@ -44,7 +44,7 @@ public:
      *
      * Destroys the Integrator object
      */
-    virtual ~Integrator();
+    virtual ~LeapFrogIntegrator();
 
     /**
      * @brief Calculates a complete time step
@@ -149,13 +149,13 @@ public:
 };
 
 template <class Container>
-Integrator<Container>::Integrator() = default;
+LeapFrogIntegrator<Container>::LeapFrogIntegrator() = default;
 
 template <class Container>
-Integrator<Container>::~Integrator() = default;
+LeapFrogIntegrator<Container>::~LeapFrogIntegrator() = default;
 
 template <class Container>
-void Integrator<Container>::integrate(bool write_time_step) const
+void LeapFrogIntegrator<Container>::integrate(bool write_time_step) const
 {
     AccelerationUpdate::accelerationUpdate(container);
     calculatePosition();
@@ -166,7 +166,7 @@ void Integrator<Container>::integrate(bool write_time_step) const
 }
 
 template <class Container>
-void Integrator<Container>::calculatePosition() const
+void LeapFrogIntegrator<Container>::calculatePosition() const
 {
 #ifdef AUTOPAS_OPENMP
     // autopas works with parallel iterators which it controls itself. No pragma omp for needed!
@@ -186,7 +186,7 @@ void Integrator<Container>::calculatePosition() const
 }
 
 template <class Container>
-void Integrator<Container>::calculateVelocity() const
+void LeapFrogIntegrator<Container>::calculateVelocity() const
 {
 #ifdef AUTOPAS_OPENMP
     // autopas works with parallel iterators which it controls itself. No pragma omp for needed!
@@ -206,7 +206,7 @@ void Integrator<Container>::calculateVelocity() const
 }
 
 template <class Container>
-void Integrator<Container>::calculateAcceleration(bool write_time_step) const
+void LeapFrogIntegrator<Container>::calculateAcceleration(bool write_time_step) const
 {
     if (write_time_step) {
         accumulator->template applyComponents<true>();
@@ -216,49 +216,49 @@ void Integrator<Container>::calculateAcceleration(bool write_time_step) const
 }
 
 template <class Container>
-double Integrator<Container>::getDeltaT() const
+double LeapFrogIntegrator<Container>::getDeltaT() const
 {
     return delta_t;
 }
 
 template <class Container>
-void Integrator<Container>::setDeltaT(double deltaT)
+void LeapFrogIntegrator<Container>::setDeltaT(double deltaT)
 {
     delta_t = deltaT;
 }
 
 template <class Container>
-const Container& Integrator<Container>::getContainer() const
+const Container& LeapFrogIntegrator<Container>::getContainer() const
 {
     return *container;
 }
 
 template <class Container>
-Container& Integrator<Container>::getContainer()
+Container& LeapFrogIntegrator<Container>::getContainer()
 {
     return *container;
 }
 
 template <class Container>
-void Integrator<Container>::setContainer(Container& container)
+void LeapFrogIntegrator<Container>::setContainer(Container& container)
 {
-    Integrator<Container>::container = &container;
+    LeapFrogIntegrator<Container>::container = &container;
 }
 
 template <class Container>
-const Acceleration::AccelerationAccumulator<Container>& Integrator<Container>::getAccumulator() const
+const Acceleration::AccelerationAccumulator<Container>& LeapFrogIntegrator<Container>::getAccumulator() const
 {
     return *accumulator;
 }
 
 template <class Container>
-Acceleration::AccelerationAccumulator<Container>& Integrator<Container>::getAccumulator()
+Acceleration::AccelerationAccumulator<Container>& LeapFrogIntegrator<Container>::getAccumulator()
 {
     return *accumulator;
 }
 
 template <class Container>
-void Integrator<Container>::setAccumulator(Acceleration::AccelerationAccumulator<Container>& accumulator)
+void LeapFrogIntegrator<Container>::setAccumulator(Acceleration::AccelerationAccumulator<Container>& accumulator)
 {
-    Integrator<Container>::accumulator = &accumulator;
+    LeapFrogIntegrator<Container>::accumulator = &accumulator;
 }

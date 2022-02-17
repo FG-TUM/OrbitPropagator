@@ -27,7 +27,7 @@ void initSimulation(int argc, char** argv)
             command_line->getOutputFileType(), file_input->getAccConfig());
         accumulator = std::make_shared<Acceleration::AccelerationAccumulator<Debris::DebrisContainer<Debris::Debris>>>(
             file_input->getAccConfig(), *container, file_input->getStartT(), file_output.get());
-        integrator = std::make_shared<Integrator<Debris::DebrisContainer<Debris::Debris>>>(*container, *accumulator,
+        integrator = std::make_shared<LeapFrogIntegrator<Debris::DebrisContainer<Debris::Debris>>>(*container, *accumulator,
             file_input->getDeltaT());
     }
     // if something went wrong with the command line parsing
