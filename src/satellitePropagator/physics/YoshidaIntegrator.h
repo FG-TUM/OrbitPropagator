@@ -20,13 +20,6 @@ template <class Container>
 class YoshidaIntegrator {
 public:
     /**
-     * @brief Default constructor
-     *
-     * Creates a new Integrator object with all values zero initialized
-     */
-    YoshidaIntegrator();
-
-    /**
      * @brief Creates a Integrator object and sets the private #container and
      * #delta_t member variables
      *
@@ -43,7 +36,24 @@ public:
         : container(&container)
         , accumulator(&accumulator_arg)
         , delta_t(delta_t_arg)
-        , delta_tDiv4(delta_t_arg / 4.) {};
+        , delta_tDiv4(delta_t_arg / 4.)
+        , w {
+            delta_t * -std::cbrt(2.) / (2. - std::cbrt(2.)),
+            delta_t * 1 / (2. - std::cbrt(2.)),
+        }
+        , c {
+            // already includes delta_t via w
+            w[1] / 2.,
+            (w[0] + w[1]) / 2.,
+            (w[0] + w[1]) / 2.,
+            w[1] / 2.,
+        }
+        , d {
+            // already includes delta_t via w
+            w[1],
+            w[0],
+            w[1],
+        } {};
 
     /**
      * @brief Default destructor
@@ -107,25 +117,13 @@ private:
         = nullptr; /**< Reference to the Acceleration::AccelerationAccumulator
                    object to calculate acceleration for the current time
                    step*/
-    double delta_t; /**< Time step to Integrate over */
-    double delta_tDiv4; /**< Time step divided by 4 */
+    const double delta_t; /**< Time step to Integrate over */
+    const double delta_tDiv4; /**< Time step divided by 4 */
 
-    // constants
-    const std::array<double, 2> w {
-        -std::cbrt(2.) / (2. - std::cbrt(2.)),
-        1 / (2. - std::cbrt(2.)),
-    };
-    const std::array<double, 4> c {
-        w[1] / 2.,
-        (w[0] + w[1]) / 2.,
-        (w[0] + w[1]) / 2.,
-        w[1] / 2.,
-    };
-    const std::array<double, 3> d {
-        w[1],
-        w[0],
-        w[1],
-    };
+    // constants that will be initialized already including delta_t
+    const std::array<double, 2> w;
+    const std::array<double, 4> c;
+    const std::array<double, 3> d;
 
 public:
     /**
@@ -134,13 +132,6 @@ public:
      * @return Value of #delta_t
      */
     [[nodiscard]] double getDeltaT() const;
-
-    /**
-     * @brief Setter function for #delta_t
-     *
-     * @param deltaT New value of #delta_t
-     */
-    void setDeltaT(double deltaT);
 
     /**
      * @brief Getter function for #accumulator
@@ -164,17 +155,7 @@ public:
      */
     [[nodiscard]] const Container& getContainer() const;
     Container& getContainer();
-
-    /**
-     * @brief Setter function for #delta_t
-     *
-     * @param container New value of #delta_t
-     */
-    void setContainer(Container& container);
 };
-
-template <class Container>
-YoshidaIntegrator<Container>::YoshidaIntegrator() = default;
 
 template <class Container>
 YoshidaIntegrator<Container>::~YoshidaIntegrator() = default;
@@ -215,9 +196,9 @@ void YoshidaIntegrator<Container>::calculatePosition(double c) const
         for (auto& particle : *container) {
             auto v = particle.getVelocity();
             auto pos = particle.getPosition();
-            pos[0] += c * delta_t * v[0];
-            pos[1] += c * delta_t * v[1];
-            pos[2] += c * delta_t * v[2];
+            pos[0] += c * v[0];
+            pos[1] += c * v[1];
+            pos[2] += c * v[2];
             particle.setPosition(pos);
         }
     }
@@ -234,9 +215,9 @@ void YoshidaIntegrator<Container>::calculateVelocity(double d) const
         for (auto& particle : *container) {
             auto v = particle.getVelocity();
             const auto& a = particle.getAccT0();
-            v[0] += d * a[0] * delta_t;
-            v[1] += d * a[1] * delta_t;
-            v[2] += d * a[2] * delta_t;
+            v[0] += d * a[0];
+            v[1] += d * a[1];
+            v[2] += d * a[2];
             particle.setVelocity(v);
         }
     }
@@ -259,12 +240,6 @@ double YoshidaIntegrator<Container>::getDeltaT() const
 }
 
 template <class Container>
-void YoshidaIntegrator<Container>::setDeltaT(double deltaT)
-{
-    delta_t = deltaT;
-}
-
-template <class Container>
 const Container& YoshidaIntegrator<Container>::getContainer() const
 {
     return *container;
@@ -274,12 +249,6 @@ template <class Container>
 Container& YoshidaIntegrator<Container>::getContainer()
 {
     return *container;
-}
-
-template <class Container>
-void YoshidaIntegrator<Container>::setContainer(Container& container)
-{
-    YoshidaIntegrator<Container>::container = &container;
 }
 
 template <class Container>
