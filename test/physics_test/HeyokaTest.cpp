@@ -2,7 +2,7 @@
 // Created by Oliver on 13.05.21.
 //
 
-#include "Integrator_test.h"
+#include "HeyokaTest.h"
 #ifdef HEYOKA_IS_PRESENT
 #include <cstdlib>
 #include <ctime>
