@@ -245,7 +245,7 @@ void AccelerationAccumulator<Container>::applyComponents() const
                 new_acc_total[1] += new_acc_component[1];
                 new_acc_total[2] += new_acc_component[2];
             }
-            // Managed particles compensate for all pertubations and stay on the keplerian orbit. We simulate this by not applying any pertubations on them.
+            // Managed particles compensate for all perturbations and stay on the keplerian orbit. We simulate this by not applying any pertubations on them.
             if(d.getActivityState() != Container::Particle_t::ActivityState::evasivePreserving) {
                 if (config[J2]) {
                     new_acc_component = J2Component::apply(d);

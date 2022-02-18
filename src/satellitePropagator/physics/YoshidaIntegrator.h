@@ -1,26 +1,24 @@
 //
-// Created by Oliver on 13.05.21.
+// Created by FG-TUM on 17.02.22.
 //
 
 #pragma once
+#include <cmath>
+
 #include "AccelerationAccumulator.h"
 #include "satellitePropagator/debris/AccelerationUpdate.h"
-
 /**
- * @class Integrator
+ * @class YoshidaIntegrator
  *
- * @brief Calculates status of Debris::Debris objects for next time step
+ * @brief Calculates status of Debris::Debris objects for next time step.
+ * Implemented following:
+ * https://en.wikipedia.org/wiki/Leapfrog_integration#4th_order_Yoshida_integrator
+ * based on:
+ * http://bison.ihep.su/~kachaev/books/ode/yoshida_const_higher_order_symplectic_integ_1990.pdf
  */
 template <class Container>
-class Integrator {
+class YoshidaIntegrator {
 public:
-    /**
-     * @brief Default constructor
-     *
-     * Creates a new Integrator object with all values zero initialized
-     */
-    Integrator();
-
     /**
      * @brief Creates a Integrator object and sets the private #container and
      * #delta_t member variables
@@ -32,19 +30,37 @@ public:
      * the current time step
      * @param delta_t_arg Time step to Integrate over
      */
-    Integrator(Container& container,
+    YoshidaIntegrator(Container& container,
         Acceleration::AccelerationAccumulator<Container>& accumulator_arg,
         double delta_t_arg)
         : container(&container)
         , accumulator(&accumulator_arg)
-        , delta_t(delta_t_arg) {};
+        , delta_t(delta_t_arg)
+        , delta_tDiv4(delta_t_arg / 4.)
+        , w {
+            delta_t * -std::cbrt(2.) / (2. - std::cbrt(2.)),
+            delta_t * 1 / (2. - std::cbrt(2.)),
+        }
+        , c {
+            // already includes delta_t via w
+            w[1] / 2.,
+            (w[0] + w[1]) / 2.,
+            (w[0] + w[1]) / 2.,
+            w[1] / 2.,
+        }
+        , d {
+            // already includes delta_t via w
+            w[1],
+            w[0],
+            w[1],
+        } {};
 
     /**
      * @brief Default destructor
      *
      * Destroys the Integrator object
      */
-    virtual ~Integrator();
+    virtual ~YoshidaIntegrator();
 
     /**
      * @brief Calculates a complete time step
@@ -63,21 +79,21 @@ public:
      * @brief Calculates the new position
      *
      * Calculates the Debris::Debris::position vector for all Debris::Debris
-     * objects of the Container #container Uses leapfrog integration
-     * with Debris::Debris::velocity and Debris::Debris::acc_t0
+     * objects of the Container #container Uses Yoshida integration
+     * with Debris::Debris::velocity and coefficient c.
      *
      */
-    void calculatePosition() const;
+    void calculatePosition(double c) const;
 
     /**
      * @brief Calculates the new velocities
      *
      * Calculates the Debris::Debris::velocity vector for all Debris::Debris
-     * objects of the Container #container Uses leapfrog integration
-     * with Debris::Debris::acc_t0 and Debris::Debris::acc_t1
+     * objects of the Container #container Uses Yoshida integration
+     * with Debris::Debris::acc_t0, Debris::Debris::acc_t0, and Coefficient d.
      *
      */
-    void calculateVelocity() const;
+    void calculateVelocity(double d) const;
 
     /**
      * @brief Calculates te acceleration for the current time step
@@ -101,7 +117,14 @@ private:
         = nullptr; /**< Reference to the Acceleration::AccelerationAccumulator
                    object to calculate acceleration for the current time
                    step*/
-    double delta_t = 0; /**< Time step to Integrate over */
+    const double delta_t; /**< Time step to Integrate over */
+    const double delta_tDiv4; /**< Time step divided by 4 */
+
+    // constants that will be initialized already including delta_t
+    const std::array<double, 2> w;
+    const std::array<double, 4> c;
+    const std::array<double, 3> d;
+
 public:
     /**
      * @brief Getter function for #delta_t
@@ -109,13 +132,6 @@ public:
      * @return Value of #delta_t
      */
     [[nodiscard]] double getDeltaT() const;
-
-    /**
-     * @brief Setter function for #delta_t
-     *
-     * @param deltaT New value of #delta_t
-     */
-    void setDeltaT(double deltaT);
 
     /**
      * @brief Getter function for #accumulator
@@ -139,74 +155,76 @@ public:
      */
     [[nodiscard]] const Container& getContainer() const;
     Container& getContainer();
-
-    /**
-     * @brief Setter function for #delta_t
-     *
-     * @param container New value of #delta_t
-     */
-    void setContainer(Container& container);
 };
 
 template <class Container>
-Integrator<Container>::Integrator() = default;
+YoshidaIntegrator<Container>::~YoshidaIntegrator() = default;
 
 template <class Container>
-Integrator<Container>::~Integrator() = default;
-
-template <class Container>
-void Integrator<Container>::integrate(bool write_time_step) const
+void YoshidaIntegrator<Container>::integrate(bool write_time_step) const
 {
-    AccelerationUpdate::accelerationUpdate(container);
-    calculatePosition();
-    accumulator->setT(accumulator->getT() + delta_t);
-    calculateAcceleration(write_time_step);
-    calculateVelocity();
-    // update time
+    // Le Math: (x_i = ith iteration ; x^j = jth substep
+    // x_i^1 = x_i + c_1 v_i delta t
+    // v_i^1 = v_i + d_1 a(x_i^1) delta t
+    // x_i^2 = x_i^1 + c_2 v_i^1 delta t
+    // v_i^2 = v_i^1 + d_2 a(x_i^2) delta t
+    // x_i^3 = x_i^2 + c_3 v_i^2 delta t
+    // v_i^3 = v_i^2 + d_3 a(x_i^3) delta t
+    // x_i^4 = x_i^3 + c_4 v_i^3 delta t        = x_(i+1)
+    // v_i^4 = v_i^3                            = v_(i+1)
+
+    // do three full and one half sub step
+    for (size_t i = 0; i < 3; ++i) {
+        calculatePosition(c[i]);
+        accumulator->setT(accumulator->getT() + delta_tDiv4);
+        calculateAcceleration(write_time_step);
+        AccelerationUpdate::accelerationUpdate(container);
+        calculateVelocity(d[i]);
+    }
+    calculatePosition(c[3]);
+    accumulator->setT(accumulator->getT() + delta_tDiv4);
 }
 
 template <class Container>
-void Integrator<Container>::calculatePosition() const
+void YoshidaIntegrator<Container>::calculatePosition(double c) const
 {
 #ifdef AUTOPAS_OPENMP
     // autopas works with parallel iterators which it controls itself. No pragma omp for needed!
 #pragma omp parallel
 #endif
     {
-        double factor = delta_t * delta_t * 0.5;
-        std::array<double, 3> new_pos {};
-        for (auto& d : *container) {
-            new_pos = d.getPosition();
-            new_pos[0] = new_pos[0] + delta_t * d.getVelocity()[0] + factor * d.getAccT0()[0];
-            new_pos[1] = new_pos[1] + delta_t * d.getVelocity()[1] + factor * d.getAccT0()[1];
-            new_pos[2] = new_pos[2] + delta_t * d.getVelocity()[2] + factor * d.getAccT0()[2];
-            d.setPosition(new_pos);
+        for (auto& particle : *container) {
+            auto v = particle.getVelocity();
+            auto pos = particle.getPosition();
+            pos[0] += c * v[0];
+            pos[1] += c * v[1];
+            pos[2] += c * v[2];
+            particle.setPosition(pos);
         }
     }
 }
 
 template <class Container>
-void Integrator<Container>::calculateVelocity() const
+void YoshidaIntegrator<Container>::calculateVelocity(double d) const
 {
 #ifdef AUTOPAS_OPENMP
     // autopas works with parallel iterators which it controls itself. No pragma omp for needed!
 #pragma omp parallel
 #endif
     {
-        const double factor = delta_t * 0.5;
-        std::array<double, 3> new_velocity {};
-        for (auto& d : *container) {
-            new_velocity = d.getVelocity();
-            new_velocity[0] = new_velocity[0] + factor * (d.getAccT0()[0] + d.getAccT1()[0]);
-            new_velocity[1] = new_velocity[1] + factor * (d.getAccT0()[1] + d.getAccT1()[1]);
-            new_velocity[2] = new_velocity[2] + factor * (d.getAccT0()[2] + d.getAccT1()[2]);
-            d.setVelocity(new_velocity);
+        for (auto& particle : *container) {
+            auto v = particle.getVelocity();
+            const auto& a = particle.getAccT0();
+            v[0] += d * a[0];
+            v[1] += d * a[1];
+            v[2] += d * a[2];
+            particle.setVelocity(v);
         }
     }
 }
 
 template <class Container>
-void Integrator<Container>::calculateAcceleration(bool write_time_step) const
+void YoshidaIntegrator<Container>::calculateAcceleration(bool write_time_step) const
 {
     if (write_time_step) {
         accumulator->template applyComponents<true>();
@@ -216,49 +234,37 @@ void Integrator<Container>::calculateAcceleration(bool write_time_step) const
 }
 
 template <class Container>
-double Integrator<Container>::getDeltaT() const
+double YoshidaIntegrator<Container>::getDeltaT() const
 {
     return delta_t;
 }
 
 template <class Container>
-void Integrator<Container>::setDeltaT(double deltaT)
-{
-    delta_t = deltaT;
-}
-
-template <class Container>
-const Container& Integrator<Container>::getContainer() const
+const Container& YoshidaIntegrator<Container>::getContainer() const
 {
     return *container;
 }
 
 template <class Container>
-Container& Integrator<Container>::getContainer()
+Container& YoshidaIntegrator<Container>::getContainer()
 {
     return *container;
 }
 
 template <class Container>
-void Integrator<Container>::setContainer(Container& container)
-{
-    Integrator<Container>::container = &container;
-}
-
-template <class Container>
-const Acceleration::AccelerationAccumulator<Container>& Integrator<Container>::getAccumulator() const
+const Acceleration::AccelerationAccumulator<Container>& YoshidaIntegrator<Container>::getAccumulator() const
 {
     return *accumulator;
 }
 
 template <class Container>
-Acceleration::AccelerationAccumulator<Container>& Integrator<Container>::getAccumulator()
+Acceleration::AccelerationAccumulator<Container>& YoshidaIntegrator<Container>::getAccumulator()
 {
     return *accumulator;
 }
 
 template <class Container>
-void Integrator<Container>::setAccumulator(Acceleration::AccelerationAccumulator<Container>& accumulator)
+void YoshidaIntegrator<Container>::setAccumulator(Acceleration::AccelerationAccumulator<Container>& accumulator)
 {
-    Integrator<Container>::accumulator = &accumulator;
+    YoshidaIntegrator<Container>::accumulator = &accumulator;
 }
