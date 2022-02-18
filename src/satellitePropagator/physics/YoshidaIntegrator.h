@@ -178,18 +178,18 @@ YoshidaIntegrator<Container>::~YoshidaIntegrator() = default;
 template <class Container>
 void YoshidaIntegrator<Container>::integrate(bool write_time_step) const
 {
-    AccelerationUpdate::accelerationUpdate(container);
     // do three full and one half sub step
     for (size_t i = 0; i < 3; ++i) {
         calculatePosition(c[i]);
         accumulator->setT(accumulator->getT() + delta_tDiv4);
         calculateAcceleration(write_time_step);
+        AccelerationUpdate::accelerationUpdate(container);
         calculateVelocity(d[i]);
     }
     calculatePosition(c[3]);
     accumulator->setT(accumulator->getT() + delta_tDiv4);
 
-    // Le Math:
+    // Le Math: (x_i = ith iteration ; x^j = jth substep
     // x_i^1 = x_i + c_1 v_i delta t
     // v_i^1 = v_i + d_1 a(x_i^1) delta t
     // x_i^2 = x_i^1 + c_2 v_i^1 delta t
