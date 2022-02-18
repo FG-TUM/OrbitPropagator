@@ -69,8 +69,8 @@ public:
      * @brief Calculates the new position
      *
      * Calculates the Debris::Debris::position vector for all Debris::Debris
-     * objects of the Container #container Uses leapfrog integration
-     * with Debris::Debris::velocity and Debris::Debris::acc_t0
+     * objects of the Container #container Uses Yoshida integration
+     * with Debris::Debris::velocity and coefficient c.
      *
      */
     void calculatePosition(double c) const;
@@ -79,8 +79,8 @@ public:
      * @brief Calculates the new velocities
      *
      * Calculates the Debris::Debris::velocity vector for all Debris::Debris
-     * objects of the Container #container Uses leapfrog integration
-     * with Debris::Debris::acc_t0 and Debris::Debris::acc_t1
+     * objects of the Container #container Uses Yoshida integration
+     * with Debris::Debris::acc_t0, Debris::Debris::acc_t0, and Coefficient d.
      *
      */
     void calculateVelocity(double d) const;
@@ -182,6 +182,16 @@ YoshidaIntegrator<Container>::~YoshidaIntegrator() = default;
 template <class Container>
 void YoshidaIntegrator<Container>::integrate(bool write_time_step) const
 {
+    // Le Math: (x_i = ith iteration ; x^j = jth substep
+    // x_i^1 = x_i + c_1 v_i delta t
+    // v_i^1 = v_i + d_1 a(x_i^1) delta t
+    // x_i^2 = x_i^1 + c_2 v_i^1 delta t
+    // v_i^2 = v_i^1 + d_2 a(x_i^2) delta t
+    // x_i^3 = x_i^2 + c_3 v_i^2 delta t
+    // v_i^3 = v_i^2 + d_3 a(x_i^3) delta t
+    // x_i^4 = x_i^3 + c_4 v_i^3 delta t        = x_(i+1)
+    // v_i^4 = v_i^3                            = v_(i+1)
+
     // do three full and one half sub step
     for (size_t i = 0; i < 3; ++i) {
         calculatePosition(c[i]);
@@ -192,16 +202,6 @@ void YoshidaIntegrator<Container>::integrate(bool write_time_step) const
     }
     calculatePosition(c[3]);
     accumulator->setT(accumulator->getT() + delta_tDiv4);
-
-    // Le Math: (x_i = ith iteration ; x^j = jth substep
-    // x_i^1 = x_i + c_1 v_i delta t
-    // v_i^1 = v_i + d_1 a(x_i^1) delta t
-    // x_i^2 = x_i^1 + c_2 v_i^1 delta t
-    // v_i^2 = v_i^1 + d_2 a(x_i^2) delta t
-    // x_i^3 = x_i^2 + c_3 v_i^2 delta t
-    // v_i^3 = v_i^2 + d_3 a(x_i^3) delta t
-    // x_i^4 = x_i^3 + c_4 v_i^3 delta t        = x_(i+1)
-    // v_i^4 = v_i^3                            = v_(i+1)
 }
 
 template <class Container>
