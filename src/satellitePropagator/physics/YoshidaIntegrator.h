@@ -12,7 +12,7 @@
  *
  * @brief Calculates status of Debris::Debris objects for next time step.
  * Implemented following:
- * https://en.wikipedia.org/wiki/Leapfrog_integration#4th_order_Yoshida_integrator 
+ * https://en.wikipedia.org/wiki/Leapfrog_integration#4th_order_Yoshida_integrator
  * based on:
  * http://bison.ihep.su/~kachaev/books/ode/yoshida_const_higher_order_symplectic_integ_1990.pdf
  */
@@ -43,7 +43,7 @@ public:
         : container(&container)
         , accumulator(&accumulator_arg)
         , delta_t(delta_t_arg)
-        , delta_tDiv4(delta_t_arg / 4.){};
+        , delta_tDiv4(delta_t_arg / 4.) {};
 
     /**
      * @brief Default destructor
